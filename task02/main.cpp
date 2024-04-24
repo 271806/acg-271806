@@ -65,8 +65,54 @@ int number_of_intersection_ray_against_quadratic_bezier(
     const Eigen::Vector2f &pc,
     const Eigen::Vector2f &pe) {
   // comment out below to do the assignment
-  return number_of_intersection_ray_against_edge(org, dir, ps, pe);
+  // return number_of_intersection_ray_against_edge(org, dir, ps, pe);
   // write some code below to find the intersection between ray and the quadratic
+
+
+  // ********************* MY IMPLEMENTATION ************************
+  // init number of intersections
+  int num_intersection = 0;
+
+  // create perpendicular to the ray direction
+  Eigen::Vector2f per_v(-dir[1], dir[0]);
+
+  // calculate the coefficients: a * t^2 + b * t + c = 0
+  float a = ps.dot(per_v) - 2 * pc.dot(per_v) + pe.dot(per_v);
+  float b = 2 * (pc - ps).dot(per_v);
+  float c = ps.dot(per_v) - org.dot(per_v);
+
+  // discriminant D = b ^ 2 - 4 * ac
+  float D = b * b - 4 * a * c;
+
+  // no intersection if D < 0
+  if (D < 0) return 0;
+
+  // find roots
+  // t1 = (-b + sqrt(D)) / (2a)
+  // t2 = (-b - sqrt(D)) / (2a)
+  float t1 = (-b + sqrt(D)) / (2 * a);
+  float t2 = (-b - sqrt(D)) / (2 * a);
+
+  // check range of t1
+  if (t1 >= 0 && t1 <= 1) {
+    // calculate intersection point using the Bézier curve equation
+    // p = (1 - t)^2 * ps + 2 * (1 - t) * t * pc + t^2 * pe
+    Eigen::Vector2f p = (1 - t1) * (1 - t1) * ps + 2 * (1 - t1) * t1 * pc + t1 * t1 * pe;
+    // must be in the positive direction of the ray
+    if (dir.dot(p - org) > 0) num_intersection++;
+  }
+
+  // Check range of t2
+  if (t2 >= 0 && t2 <= 1) {
+    // calculate intersection point using the Bézier curve equation
+    // p = (1 - t)^2 * ps + 2 * (1 - t) * t * pc + t^2 * pe
+    Eigen::Vector2f p = (1 - t2) * (1 - t2) * ps + 2 * (1 - t2) * t2 * pc + t2 * t2 * pe;
+    // must be in the positive direction of the ray
+    if (dir.dot(p - org) > 0) num_intersection++;
+  }
+
+  return num_intersection;
+  // ********************* IMPLEMENTATION END ************************
 }
 
 int main() {
