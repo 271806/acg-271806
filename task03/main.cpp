@@ -67,9 +67,42 @@ void draw_3d_triangle_with_texture(
       // `bc` gives the barycentric coordinate **on the screen** and it is distorted.
       // Compute the barycentric coordinate ***on the 3d triangle** below that gives the correct texture mapping.
       // (Hint: formulate a linear system with 4x4 coefficient matrix and solve it to get the barycentric coordinate)
-      Eigen::Matrix4f coeff;
-      Eigen::Vector4f rhs;
+      //*******My implementation********
+      // Compute the inverse of the camera transformation matrix to go back to original 3D space
+      Eigen::Matrix4f inv_transform = camera_transformation().inverse();
 
+      // Recover the original 3D points
+      Eigen::Translation3f transl(0., 0., -2.0);
+      Eigen::Matrix4f translate = Eigen::Affine3f(transl).matrix();
+      Eigen::Vector4f p0_recovered = translate * inv_transform * q0;
+      Eigen::Vector4f p1_recovered = translate * inv_transform * q1;
+      Eigen::Vector4f p2_recovered = translate * inv_transform * q2;
+
+      // Compute the barycentric coordinate ***on the 3d triangle*** that gives the correct texture mapping
+      Eigen::Matrix4f coeff;
+      coeff << p0_recovered.x(), p1_recovered.x(), p2_recovered.x(), 0,
+               p0_recovered.y(), p1_recovered.y(), p2_recovered.y(), 0,
+              -p0_recovered.z(), -p1_recovered.z(), -p2_recovered.z(), 0,
+              1,                1,                1,                1;
+
+      // Here is original configuration
+      const float near_clipping_dist = 0.5; // Near clipping distance
+      const float near_clipping_size = 0.55; // Near clipping size
+      // Recover the pixel coordinate
+      const auto s_recovered = Eigen::Vector2f(s.x() * near_clipping_size, s.y() * near_clipping_size);
+      // Here is the Right Hand Side of the linear system
+      Eigen::Vector4f rhs(s_recovered.x(),
+                          s_recovered.y(),
+                          0.5, // Z value of the pixel
+                          -(bc[0] / p0_recovered.z() + bc[1] / p1_recovered.z() + bc[2] / p2_recovered.z()));
+
+      // Solve the linear system
+      Eigen::Vector4f bc_3d = coeff.colPivHouseholderQr().solve(rhs);
+      // Normalize the barycentric coordinate
+      bc_3d /= bc_3d[3];
+      bc = bc_3d.head(3);
+
+      //*******End of my implementation********
       // do not change below
       auto uv = uv0 * bc[0] + uv1 * bc[1] + uv2 * bc[2]; // uv coordinate of the pixel
       // compute pixel coordinate of the texture
