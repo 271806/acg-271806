@@ -24,9 +24,27 @@ void main()
         // make sure the occlusion is correctly computed.
         // the mirror is behind the armadillo, so the reflected image should be behind the armadillo.
         // furthermore, make sure the occlusion is correctly computed for the reflected image.
-        //x0 = ???
-        //y0 = ???
-        //z0 = ???
+        //****implementation start****
+        // Calculate 3 items: 
+        // 1. vector: vertex <-> mirror point
+        // 2. distance: vertex <-> mirror plane
+        // 3. reflected vertex location
+        vec3 vertex_mirror = vec3(x0, y0, z0) - org;
+        float distance_plane = dot(vertex_mirror, nrm);
+        vec3 reflected_v = vec3(x0, y0, z0) - 2.0 * distance_plane * nrm;
+        
+        // vertex location update
+        x0 = reflected_v.x;
+        y0 = reflected_v.y;
+        z0 = reflected_v.z;
+        
+        // adjust depth
+        float mirror_depth = dot(org, nrm);
+        float vertex_depth = dot(vec3(x0, y0, z0), nrm);
+        float depth_difference = vertex_depth - mirror_depth;
+        
+        // offset for occlusion
+        z0 -= depth_difference;
     }
     // do not edit below
 
