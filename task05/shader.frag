@@ -35,16 +35,47 @@ float box_size = 0.6; // size of box
 /// singed distance function at the position `pos`
 float SDF(vec3 pos)
 {
+  // Cylinder_ori and Cylinder_rotated
   float d0 = sdCappedCylinder(pos, len_cylinder, rad_cylinder);
+  float d0_rotate1 = sdCappedCylinder(vec3 (pos.x, pos.z, -pos.y), len_cylinder, rad_cylinder);
+  float d0_rotate2 = sdCappedCylinder(vec3 (pos.y, pos.x, -pos.z), len_cylinder, rad_cylinder);
+  // Box
+  float d1 = sdBox(pos, vec3(box_size, box_size, box_size));
+  // Sphere
+  float d2 = sdSphere(pos, rad_sphere);
+
+  float Box_Sphere = max(d1, d2); // Intersection
+  float Cylinders = min(min(d0, d0_rotate1), d0_rotate2); // Union
+
   // write some code to combine the signed distance fields above to design the object described in the README.md
-  return d0; // comment out and define new distance
+  //return d0; // comment out and define new distance
+  return max(Box_Sphere, -Cylinders); // Subtraction
 }
 
 /// RGB color at the position `pos`
 vec3 SDF_color(vec3 pos)
 {
   // write some code below to return color (RGB from 0 to 1) to paint the object describe in README.md
-  return vec3(0., 1., 0.); // comment out and define new color
+  // Cylinder_ori and Cylinder_rotated
+  float d0 = sdCappedCylinder(pos, len_cylinder, rad_cylinder);
+  float d0_rotate1 = sdCappedCylinder(vec3 (pos.x, pos.z, -pos.y), len_cylinder, rad_cylinder);
+  float d0_rotate2 = sdCappedCylinder(vec3 (pos.y, pos.x, -pos.z), len_cylinder, rad_cylinder);
+  // Box
+  float d1 = sdBox(pos, vec3(box_size, box_size, box_size));
+  // Sphere
+  float d2 = sdSphere(pos, rad_sphere);
+  // Cylinders
+  float Cylinders = min(min(d0, d0_rotate1), d0_rotate2);
+
+  // Order: Cylinders --> Box --> Sphere
+  if (Cylinders < 0.0) {
+    return vec3(0., 1., 0.); // paint green
+  } else if (d1 < 0.0) {
+    return vec3(0., 0., 1.); // paint blue
+  } else if (d2 < 0.0) {
+    return vec3(1., 0., 0.); // paint red
+  }
+  // return vec3(0., 1., 0.); // comment out and define new color
 }
 
 uniform float time; // current time given from CPU
