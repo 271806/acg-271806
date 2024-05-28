@@ -15,6 +15,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#include <random>
+std::mt19937 rndeng(std::random_device{}());
+
 /**
  * Rotation matrix such that z-axis will be direction of `nrm`
  * @param nrm transfromed z-axis
@@ -37,7 +40,9 @@ auto local_to_world_vector_transformation(
  */
 auto sample_hemisphere(
     const Eigen::Vector3f &nrm) -> std::pair<Eigen::Vector3f, float> {
-  const auto unirand = Eigen::Vector2f::Random() * 0.5f + Eigen::Vector2f(0.5, 0.5);
+  // const auto unirand = Eigen::Vector2f::Random() * 0.5f + Eigen::Vector2f(0.5, 0.5);
+  auto dist_01 = std::uniform_real_distribution<float>(0.f, 1.f);
+  const auto unirand = Eigen::Vector2f(dist_01(rndeng),dist_01(rndeng));
   const float phi = 2.f * float(M_PI) * unirand.y();
 
   // the code to uniformly sample hemisphere (z-up)
@@ -51,8 +56,15 @@ auto sample_hemisphere(
 
   // For Problem 4, write some code below to sample hemisphere with cosign weight
   // (i.e., the sampling frequency is higher at the top)
+  // code for sampling hemisphere with cosign weight
+  const float cos_theta = std::sqrt(unirand.x());
+  const float sin_theta = std::sqrt(1.f - cos_theta * cos_theta);
+  dir_loc = Eigen::Vector3f(
+    sin_theta * std::cos(phi),
+    sin_theta * std::sin(phi),
+    cos_theta);
 
-
+  pdf = cos_theta / float(M_PI);
   // end of Problem 4. Do not modify the two lines below
   const auto dir_out = local_to_world_vector_transformation(nrm) * dir_loc; // rotate the sample (zup -> nrm)
   return {dir_out, pdf};
@@ -119,14 +131,49 @@ void search_collision_in_bvh(
   // For problem 2, implement some code here to evaluate BVH
   // hint: use following function
   //   bvhnodes[i_bvhnode].intersect_bv(ray_org, ray_dir)
+  // intersect_bv: bool <-- true if there is intersection
 
   if (bvhnodes[i_bvhnode].is_leaf()) { // this is leaf node
-    const unsigned int i_tri = bvhnodes[i_bvhnode].i_node_left;
+    const unsigned int i_tri = bvhnodes[i_bvhnode].i_node_left; // Get the triangle index from the leaf node (on the left)
     // do something
+    // do ray-triangle intersection test
+    const auto res = ray_triangle_intersection(ray_org, ray_dir, i_tri, tri2vtx, vtx2xyz);
+
+    if (res) { // If intersect
+      const auto& [q0,n0] = res.value(); // Extract the hit position (q0) and normal (n0) from the intersection result
+      const float depth = (q0 - ray_org).dot(ray_dir); // Calculate the depth of the hit point
+      if (hit_depth > depth) { // If the current hit point is closer than the previous one, update
+        is_hit = true;
+        hit_depth = depth;
+        hit_pos = q0;
+        hit_normal = n0;
+      }
+    }
   } else { // this is branch node
     unsigned int i_node_right = bvhnodes[i_bvhnode].i_node_right;
     unsigned int i_node_left =bvhnodes[i_bvhnode].i_node_left;
-    // do something (hint recursion)
+    // do something (hint recursion) (Traverse the left and right child nodes recursively)
+    // if intersect with **left**
+    if (bvhnodes[i_node_left].intersect_bv(ray_org, ray_dir)){ // if has intersection
+      // recursively search **left**
+      search_collision_in_bvh(
+        is_hit, hit_depth, hit_pos, hit_normal, // hit
+        i_node_left, // pass index of **left** node
+        ray_org, ray_dir, // ray
+        tri2vtx, vtx2xyz, // mesh
+        bvhnodes); // nodes
+    }
+
+    // if intersect with **right**
+    if (bvhnodes[i_node_right].intersect_bv(ray_org, ray_dir)){ // if has intersection
+      // recursively search **right**
+      search_collision_in_bvh(
+        is_hit, hit_depth, hit_pos, hit_normal, // hit
+        i_node_right, // pass index of **right** node
+        ray_org, ray_dir, // ray
+        tri2vtx, vtx2xyz, // mesh
+        bvhnodes); // nodes
+    }
   }
 }
 
@@ -142,20 +189,20 @@ auto find_intersection_between_ray_and_triangle_mesh(
   Eigen::Vector3f hit_pos;
   Eigen::Vector3f hit_normal;
 
-  // for Problem 2,3,4, comment out from here
-  for (unsigned int i_tri = 0; i_tri < tri2vtx.rows(); ++i_tri) {
-    const auto res = ray_triangle_intersection(ray_org, ray_dir, i_tri, tri2vtx, vtx2xyz);
-    if (!res) { continue; }
-    const auto& [q0,n0] = res.value();
-    const float depth = (q0 - ray_org).dot(ray_dir);
-    if (hit_depth > depth) {
-      is_hit = true;
-      hit_depth = depth;
-      hit_pos = q0;
-      hit_normal = n0;
-    }
-  }
-  // comment out end
+  // // for Problem 2,3,4, comment out from here
+  // for (unsigned int i_tri = 0; i_tri < tri2vtx.rows(); ++i_tri) {
+  //   const auto res = ray_triangle_intersection(ray_org, ray_dir, i_tri, tri2vtx, vtx2xyz);
+  //   if (!res) { continue; }
+  //   const auto& [q0,n0] = res.value();
+  //   const float depth = (q0 - ray_org).dot(ray_dir);
+  //   if (hit_depth > depth) {
+  //     is_hit = true;
+  //     hit_depth = depth;
+  //     hit_pos = q0;
+  //     hit_normal = n0;
+  //   }
+  // }
+  // // comment out end
 
   // do not edit from here
   search_collision_in_bvh(
@@ -208,7 +255,7 @@ int main() {
         img_data_nrm[(ih * img_width + iw) * 3 + 1] = nrm.y() * 0.5f + 0.5f;
         img_data_nrm[(ih * img_width + iw) * 3 + 2] = nrm.z() * 0.5f + 0.5f;
       }
-      continue; // comment out here for Problem 3,4
+      // continue; // comment out here for Problem 3,4
       //
       if (res) { // ambient occlusion computation
         const unsigned int num_sample_ao = 100;
@@ -219,8 +266,9 @@ int main() {
           const auto[dir, pdf] = sample_hemisphere(nrm); // direction of the sampled light position and its PDF
           const auto res1 = find_intersection_between_ray_and_triangle_mesh(
               pos0, dir, tri2vtx, vtx2xyz, bvhnodes);
-          if (!res1) { // if the ray doe not hit anything
-            sum += 1.f; // Problem 3: This is a bug. write some correct code (hint: use `dir.dot(nrm)`, `pdf`, `M_PI`).
+          if (!res1) { // if the ray does not hit anything
+            // sum += 1.f; // Problem 3: This is a bug. write some correct code (hint: use `dir.dot(nrm)`, `pdf`, `M_PI`).
+            sum += (1.f * dir.dot(nrm)) / (pdf * M_PI); // uniformally sample the hemisphere pdf -> 1/(2pi)
           }
         }
         img_data_ao[ih * img_width + iw] = sum / float(num_sample_ao); // do not change
