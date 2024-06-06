@@ -367,7 +367,8 @@ int main() {
         if (hit1_object == -1){ continue; }
         float hit1_rad = spheres[hit1_object].emission;
         // compute the contribution for this pixel
-        float rad = 0.f; // replace this with some code
+        // float rad = 0.f; // replace this with some code
+        float rad = hit0_brdf * hit1_rad * std::max(0.f, hit0_refl.dot(hit0_normal)) / (nsample * hit0_pdf);
         img_light[ih * img_width + iw] += rad;
       }
       // -----------------
@@ -386,7 +387,8 @@ int main() {
         if (hit1_object == -1){ continue; }
         float hit1_rad = spheres[hit1_object].emission;
         // compute the contribution for this pixel
-        float rad = 0.f; // replace this with some code
+        // float rad = 0.f; // replace this with some code
+        float rad = hit0_brdf * hit1_rad * std::max(0.f, hit0_refl.dot(hit0_normal)) / (nsample * hit0_pdf);
         img_brdf[ih * img_width + iw] += rad;
       }
       // -----------------
@@ -404,7 +406,9 @@ int main() {
         float hit1_rad = spheres[hit1_object].emission;
         float hit0_pdf_brdf_sample = spheres[hit0_object].pdf(hit0_normal, cam_ray_dir, hit0_refl);
         float hit0_pdf_light_sample = pdf_light_sample(hit0_normal, hit0_pos, cam_ray_dir, hit0_refl, hit0_object);
-        float rad = 0.f; // write some code
+        // float rad = 0.f; // write some code
+        float weight = hit0_pdf_brdf_sample / (hit0_pdf_brdf_sample + hit0_pdf_light_sample);
+        float rad = weight * hit0_brdf * hit1_rad * std::max(0.f, hit0_refl.dot(hit0_normal)) / (num_half_sample * hit0_pdf_brdf_sample);
         img_mis[ih * img_width + iw] += rad;
       }
       for (int isample = 0; isample < nsample / 2; ++isample) {
@@ -416,7 +420,9 @@ int main() {
         float hit1_rad = spheres[hit1_object].emission;
         float hit0_pdf_light_sample = pdf_light_sample(hit0_normal, hit0_pos, cam_ray_dir, hit0_refl, hit0_object);
         float hit0_pdf_brdf_sample = spheres[hit0_object].pdf(hit0_normal, cam_ray_dir, hit0_refl);
-        float rad = 0.f; // write some code
+        // float rad = 0.f; // write some code
+        float weight = hit0_pdf_light_sample / (hit0_pdf_brdf_sample + hit0_pdf_light_sample);
+        float rad = weight * hit0_brdf * hit1_rad * std::max(0.f, hit0_refl.dot(hit0_normal)) / (num_half_sample * hit0_pdf_light_sample);
         img_mis[ih * img_width + iw] += rad;
       }
     }
