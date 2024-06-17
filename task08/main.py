@@ -95,6 +95,9 @@ class HelloWorld(mglw.WindowConfig):
             # below, write one or two lines of code to compute `bone2globalTransformation[i_bone]`
             # hint: use numpy.matmul for multiplying nd-array
             # bone2globalTransformation[i_bone] = ???
+            bone2globalTransformation[i_bone] = np.matmul(
+            bone2globalTransformation[i_bone_parent],
+            bone2relativeTransformation[i_bone])
 
         for i_vtx in range(self.vtx2xyz_ini.shape[0]):  # for each point in mesh
             p0 = self.vtx2xyz_ini[i_vtx]
@@ -108,7 +111,8 @@ class HelloWorld(mglw.WindowConfig):
                 # write a few lines of codes to compute p1 using the linear blend skinning
                 # hint: use np.matmul for matrix multiplication
                 # hint: assume that rig weights w add up to one
-
+                pos = np.matmul(globalTransformation, np.matmul(inverseBindingMatrix, p0))
+                p1 += w * pos # multiply w to position and add to p1
                 # p1 += ???
 
             self.vtx2xyz_def[i_vtx] = p1[:3]  # from homogeneous coordinates to the Cartesian coordinates

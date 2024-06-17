@@ -72,3 +72,6 @@ build
 !asset/armadillo.obj
 
 venv
+
+.conda/
+__pycache__/
