@@ -139,7 +139,23 @@ class HelloWorld(mglw.WindowConfig):
         # you may use `spsolve` to solve the liner system
         # spsolve: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html#scipy.sparse.linalg.spsolve
 
-
+        #------------------------------------------------
+        """Implement Laplacian deformation"""
+        """
+        laplacian_system_matrix = self.matrix_fix + self.matrix_laplace
+        deformation_constraint = self.matrix_fix @ self.vtx2xyz_def + self.matrix_laplace @ self.vtx2xyz_ini
+        self.vtx2xyz_def = spsolve(laplacian_system_matrix, deformation_constraint).astype(np.float32)
+        self.vtx2xyz_def = np.ascontiguousarray(self.vtx2xyz_def)
+        """
+        #------------------------------------------------
+        
+        #------------------------------------------------
+        """Implement Bi-Laplacian deformation"""
+        bilaplacian_system_matrix = self.matrix_fix + self.matrix_bilaplace
+        deformation_constraint = self.matrix_fix @ self.vtx2xyz_def + self.matrix_bilaplace @ self.vtx2xyz_ini
+        self.vtx2xyz_def = spsolve(bilaplacian_system_matrix, deformation_constraint).astype(np.float32)
+        self.vtx2xyz_def = np.ascontiguousarray(self.vtx2xyz_def)
+        #------------------------------------------------
         # do not edit beyond here
         # above: deformation
         # ---------------------
